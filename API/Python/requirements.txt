@@ -2,6 +2,6 @@ fastapi
 uvicorn
 numpy
 pandas
-load_dotenv
+python-dotenv
 azure-cosmos
 azure-storage-blob

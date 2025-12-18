@@ -4,8 +4,9 @@ from typing import List, Any
 from datetime import datetime, timedelta
 from io import StringIO
 from azure_connections import storage_c, cosmos_c
-from config import grades_names, tz_cambio, ciclo_modulo
+from config import grades_names, tz_cambio, ciclo_modulo, encontrar_intervalo
 from copy import copy
+from zoneinfo import ZoneInfo
 
 import pytz
 import json
@@ -70,6 +71,8 @@ class TrucksQualitiesRequest(BaseModel):
     trucks_input: List[Any]
     qualities_input: List[Any]
     id_mod: str
+    avances: List[Any]
+    delta: float
 
 @app.post("/trucks_qualities_union")
 def trucks_qualities_union(request: TrucksQualitiesRequest):
@@ -77,10 +80,34 @@ def trucks_qualities_union(request: TrucksQualitiesRequest):
     trucks_input = request.trucks_input
     qualities_input = request.qualities_input
     id_mod = request.id_mod
+    avances = request.avances
+    delta = request.delta
     
+
+    for avance in avances:
+        avance['Fecha'] = datetime.strptime(avance['Fecha'], '%Y-%m-%d %H:%M:%S').replace(tzinfo=ZoneInfo('America/Santiago'))
+
+    # Generar intervalos en una línea
+    intervalos = [
+        {
+            'Intervalo': f"{a['Avance']} - {b['Avance']}", 
+            'Fecha_inicio': a['Fecha'], 
+            'Fecha_fin': b['Fecha']
+        } 
+        for a, b in zip(avances, avances[1:])
+    ]
     truck_record_qualities = []
 
     for truck_record in trucks_input :
+        # Asignación de Intervalo de Avance
+
+        time_empty_UTC = datetime.strptime(truck_record['time_empty'], '%Y-%m-%dT%H:%M:%SZ').replace(tzinfo=ZoneInfo('UTC'))
+        time_empty_stacking = time_empty_UTC + timedelta(hours=delta)
+        intervalo = encontrar_intervalo(time_empty_stacking, intervalos)
+    
+        truck_record['Intervalo'] = intervalo['Intervalo']
+
+        
         # Filtrar los registros en data_qualities cuyo grade_id coincida con el grade_id del truck_record
         filtered_qualities = [
             record for record in qualities_input 
@@ -102,13 +129,16 @@ def trucks_qualities_union(request: TrucksQualitiesRequest):
             
             qualities_dict = {'grade_id': selected_keys_record['grade_id']}
             qualities_dict.update(dict(zip(grades_names, qualities_values)))
+    
             truck_record.update({'id_mod' : id_mod})
             truck_record_qualities.append({**truck_record, **qualities_dict})
+
             
         else:
             logger.info("No hay registros que coincidan con el grade_id y la fecha especificada.")
-            
+           
     return json.dumps(truck_record_qualities)
+
 
 
 class DatosADF(BaseModel):

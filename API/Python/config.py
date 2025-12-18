@@ -57,3 +57,6 @@ def ciclo_modulo(id_mod) :
         ciclo = int(id_mod[2:])
         modulo = int(id_mod[:2])
         return ciclo, modulo
+
+def encontrar_intervalo(fecha, intervalos):
+    return next((i for i in intervalos if i['Fecha_inicio'] <= fecha <= i['Fecha_fin']), None)
