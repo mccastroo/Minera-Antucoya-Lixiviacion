@@ -137,7 +137,7 @@ def trucks_qualities_union(request: TrucksQualitiesRequest):
         else:
             logger.info("No hay registros que coincidan con el grade_id y la fecha especificada.")
            
-    return json.dumps(truck_record_qualities)
+    return truck_record_qualities
 
 
 

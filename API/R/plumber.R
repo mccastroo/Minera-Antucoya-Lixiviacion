@@ -2,8 +2,8 @@ library(dplyr)
 library(lubridate)
 library(plumber)
 
-#* @apiTitle Ripios API - R
-#* @apiDescription Funciones que permiten trabajar variables para el proyecto de Ripios de Minera Antucoya
+#* @apiTitle Lixiviación Minera Antucoya API - R
+#* @apiDescription Funciones que permiten trabajar variables para el proyecto de Lixiviación de Minera Antucoya
 upsert_cosmos <- function(cosmos_container, df, id_str){
   datos_flujo <- lapply(1:nrow(df), function(r){
     
@@ -89,13 +89,14 @@ variablesNumericas <- c(
   )
 
 #* Función que concluye las variables de despacho para el modelo predictivo
-#* @param datos_finales_camiones Este .json nace desde el data.frame de cruzar shift_dumps y variable de minerales (para este caso usamos la tabla grades)
+#* @parser json
 #* @post /jigsaw_variables
 #* @serializer unboxedJSON
-function(datos_finales_camiones) {
+function(req) {
+  datos_finales_camiones <- req$body
   
   datos_finales_camiones <- 
-    jsonlite::fromJSON(datos_finales_camiones) %>%
+    dplyr::bind_rows(datos_finales_camiones) %>%
     dplyr::arrange(time_empty) %>%
     dplyr::rename('UGM' = 'UGM_NIR') %>%
     dplyr::select(-notes) %>%
@@ -353,7 +354,7 @@ function(datos_finales_camiones) {
     )
 
   
-# Variable retorno ------------------------------------------------------------------
+  # Variable retorno ------------------------------------------------------------------
   
   variablesJigsaw <-
     UGM_modulo_general %>%
@@ -366,13 +367,13 @@ function(datos_finales_camiones) {
 }
 
 
-#*Función que concluye los estadísticos a mostrar en la visualización de avances
-#*@param datos_finales_camiones_json Este .json es el que obtenemos cruzando la info del shift_dumps y qualities
-#*@post /jigsaw_avances
-#*@serializer unboxedJSON
+#* Función que concluye los estadísticos a mostrar en la visualización de avances
+#* @parser json
+#* @post /jigsaw_avances
+#* @serializer unboxedJSON
 
-function(datos_finales_camiones_json){
-  
+function(req){
+  datos_finales_camiones_json <- req$body
   variables_numericas <- c(
     "CUT", 
     "CUS",
@@ -388,19 +389,23 @@ function(datos_finales_camiones_json){
     "MENA2",
     "MENA3"
   )
+
+  print(datos_finales_camiones_json)
   
   datos_finales_camiones <- 
-    jsonlite::fromJSON(datos_finales_camiones_json) %>%
+    dplyr::bind_rows(datos_finales_camiones_json) %>%
     dplyr::rename('UGM' = 'UGM_NIR') %>%
     dplyr::mutate(UGM = as.numeric(UGM)) %>%
     dplyr::mutate_at(variables_numericas, .funs = ~as.numeric(.x)) %>%
     dplyr::mutate(CUS_CUT = CUS/CUT)
   
+  print(datos_finales_camiones)
+
   COMP_modulo_avances <-
     datos_finales_camiones %>%
-    dplyr::select(time_empty_UTC_4, id_mod, Intervalo, MENA1, MENA2, MENA3) %>%
+    dplyr::select(time_empty, id_mod, Intervalo, MENA1, MENA2, MENA3) %>%
     tidyr::pivot_longer(cols = c('MENA1', 'MENA2', 'MENA3')) %>%
-    dplyr::group_by(time_empty_UTC_4, id_mod) %>%
+    dplyr::group_by(time_empty, id_mod) %>%
     dplyr::filter(value != 0) %>%
     dplyr::ungroup() %>%
     dplyr::mutate(name = stringr::str_remove(name, 'MENA')) %>%
@@ -460,9 +465,11 @@ function(datos_finales_camiones_json){
       .vars = dplyr::vars(variables_numericas),
       .funs = dplyr::funs(
         mean,
+        min,
+        max,
+        p50 = quantile(., 0.50),
         p75 = quantile(., 0.75),
-        p90 = quantile(., 0.90),
-        max
+        p90 = quantile(., 0.90)
       )
     ) %>%
     dplyr::ungroup()
