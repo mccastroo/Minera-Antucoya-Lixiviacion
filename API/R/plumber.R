@@ -389,8 +389,6 @@ function(req){
     "MENA2",
     "MENA3"
   )
-
-  print(datos_finales_camiones_json)
   
   datos_finales_camiones <- 
     dplyr::bind_rows(datos_finales_camiones_json) %>%
@@ -399,8 +397,6 @@ function(req){
     dplyr::mutate_at(variables_numericas, .funs = ~as.numeric(.x)) %>%
     dplyr::mutate(CUS_CUT = CUS/CUT)
   
-  print(datos_finales_camiones)
-
   COMP_modulo_avances <-
     datos_finales_camiones %>%
     dplyr::select(time_empty, id_mod, Intervalo, MENA1, MENA2, MENA3) %>%
