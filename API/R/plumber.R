@@ -93,7 +93,7 @@ variablesNumericas <- c(
 #* @post /jigsaw_variables
 #* @serializer unboxedJSON
 function(req) {
-  datos_finales_camiones <- req$body
+  datos_finales_camiones <- req$body$datos_finales_camiones
   
   datos_finales_camiones <- 
     dplyr::bind_rows(datos_finales_camiones) %>%
@@ -373,7 +373,7 @@ function(req) {
 #* @serializer unboxedJSON
 
 function(req){
-  datos_finales_camiones_json <- req$body
+  datos_finales_camiones_json <- req$body$datos_finales_camiones
   variables_numericas <- c(
     "CUT", 
     "CUS",

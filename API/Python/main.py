@@ -100,8 +100,13 @@ def trucks_qualities_union(request: TrucksQualitiesRequest):
 
     for truck_record in trucks_input :
         # Asignación de Intervalo de Avance
+        
+        time_empty_UTC = truck_record['time_empty']
 
-        time_empty_UTC = datetime.strptime(truck_record['time_empty'], '%Y-%m-%dT%H:%M:%SZ').replace(tzinfo=ZoneInfo('UTC'))
+        if "Z" not in time_empty_UTC:
+            time_empty_UTC = f"{time_empty_UTC}Z"
+
+        time_empty_UTC = datetime.strptime(time_empty_UTC, '%Y-%m-%dT%H:%M:%SZ').replace(tzinfo=ZoneInfo('UTC'))
         time_empty_stacking = time_empty_UTC + timedelta(hours=delta)
         intervalo = encontrar_intervalo(time_empty_stacking, intervalos)
     
